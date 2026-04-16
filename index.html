@@ -456,6 +456,16 @@ function openSponsorModal(monthOffset, pageFilter, title) {
 
 function renderModal(title, headers, rows) {
   document.getElementById('modalTitle').innerText = title;
+  
+  // Header of the modal with an added note for ongoing ads
+  let noteHtml = '';
+  // Only show the note if we are in the Sponsor modal and there are rows
+  if (headers.includes('Duration (days)')) {
+    noteHtml = `<p style="color: var(--red); font-size: 0.75rem; margin-bottom: 10px; font-weight: 600; letter-spacing: 0.02em;">
+                * Rows in red indicate that the advertisement period has not yet expired (Ongoing Ad).
+                </p>`;
+  }
+
   let theadHtml = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
   document.getElementById('modalThead').innerHTML = theadHtml;
   
@@ -469,6 +479,18 @@ function renderModal(title, headers, rows) {
     }).join('');
   }
   
+  // Inject the note before the table container
+  const tableContainer = document.querySelector('.table-container');
+  const existingNote = document.getElementById('modalNote');
+  if (existingNote) existingNote.remove(); // Clear old note if exists
+  
+  if (noteHtml) {
+    const noteElement = document.createElement('div');
+    noteElement.id = 'modalNote';
+    noteElement.innerHTML = noteHtml;
+    tableContainer.parentNode.insertBefore(noteElement, tableContainer);
+  }
+
   document.getElementById('modalTbody').innerHTML = tbodyHtml;
   document.getElementById('dataModal').style.display = 'block';
 }
