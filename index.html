@@ -411,9 +411,12 @@ function getSponsorData(monthOffset, pageFilter) {
     const startDate = dt.getValue(i, 3); 
     const duration = dt.getValue(i, 4) || ''; 
     const note = dt.getValue(i, 5) || ''; 
-    const rv = parseFloat(dt.getValue(i, 6)) || 0; 
+    const rvRaw = parseFloat(dt.getValue(i, 6)) || 0; 
 
-    // Check if Ongoing
+    // اختصار رقم المشاهدات داخل الجدول (K/M)
+    const rvFormatted = formatViews(rvRaw);
+
+    // التحقق إذا كان الإعلان مستمراً
     let isOngoing = false;
     if (startDate instanceof Date && duration) {
         const days = parseInt(duration) || 0;
@@ -421,7 +424,7 @@ function getSponsorData(monthOffset, pageFilter) {
         endDate.setDate(endDate.getDate() + days);
         const now = new Date();
         if (now < endDate) {
-            isOngoing = true; // Ad hasn't finished yet
+            isOngoing = true; 
         }
     }
 
@@ -432,14 +435,49 @@ function getSponsorData(monthOffset, pageFilter) {
 
       if (include) {
         rows.push({
-          cells: [page.toUpperCase(), site, `$${amount}`, startDate ? formatDateOnly(startDate) : '', duration, note, rv],
+          // هنا تم وضع الرقم المختصر rvFormatted بدلاً من الرقم الخام
+          cells: [page.toUpperCase(), site, `$${amount}`, startDate ? formatDateOnly(startDate) : '', duration, note, rvFormatted],
           isOngoing: isOngoing
         });
-        totalRV += rv;
+        totalRV += rvRaw;
       }
     }
   }
   return {rows, totalRV};
+}
+
+// دالة العرض المحدثة مع الملاحظة الحمراء
+function renderModal(title, headers, rows) {
+  document.getElementById('modalTitle').innerText = title;
+  
+  // إزالة أي ملاحظة سابقة قبل الإضافة
+  const existingNote = document.getElementById('modalNote');
+  if (existingNote) existingNote.remove();
+
+  let noteHtml = '';
+  // إظهار الملاحظة فقط في جداول الإعلانات (التي تحتوي على عمود المدة)
+  if (headers.includes('Duration (days)')) {
+    noteHtml = `<p id="modalNote" style="color: var(--red); font-size: 0.75rem; margin-bottom: 10px; font-weight: 600;">
+                * Rows in red indicate that the advertisement is still active (Ongoing).
+                </p>`;
+    document.getElementById('modalTitle').insertAdjacentHTML('afterend', noteHtml);
+  }
+
+  let theadHtml = '<tr>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+  document.getElementById('modalThead').innerHTML = theadHtml;
+  
+  let tbodyHtml = '';
+  if (rows.length === 0) {
+    tbodyHtml = `<tr><td colspan="${headers.length}" style="text-align:center; padding: 20px; color: var(--muted);">No data available</td></tr>`;
+  } else {
+    tbodyHtml = rows.map(r => {
+      const rowClass = r.isOngoing ? 'class="ongoing-ad"' : '';
+      return `<tr ${rowClass}>` + r.cells.map(c => `<td>${c}</td>`).join('') + '</tr>';
+    }).join('');
+  }
+  
+  document.getElementById('modalTbody').innerHTML = tbodyHtml;
+  document.getElementById('dataModal').style.display = 'block';
 }
 
 function openVideoModal(monthOffset, type, title) {
